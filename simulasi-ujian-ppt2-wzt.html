@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Ujian — WZT (Wartegg Zeichen Test)</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1b2333; --muted:#66708a;
+    --line:#e3e8f2; --accent:#4f46e5; --accent-soft:#eef0ff;
+    --ok:#0f9d68; --ok-soft:#e6f7ef; --bad:#dc2f4b; --bad-soft:#fdecef;
+    --warn:#e08a00; --warn-soft:#fdf3e2;
+    --shadow:0 1px 2px rgba(20,30,60,.05), 0 8px 24px rgba(20,30,60,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.55;
+    -webkit-font-smoothing:antialiased; padding:0 0 60px;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 18px}
+  header.top{
+    background:linear-gradient(135deg,#4f46e5 0%,#6d5ce7 55%,#8b5cf6 100%);
+    color:#fff; padding:26px 0 22px; margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(79,70,229,.22);
+  }
+  header.top h1{font-size:20px;letter-spacing:-.2px;font-weight:700}
+  header.top p{font-size:13px;opacity:.9;margin-top:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px}
+  h2{font-size:17px;letter-spacing:-.2px;margin-bottom:12px}
+  h3{font-size:14px;margin-bottom:8px}
+  .lead{color:var(--muted);font-size:14px}
+  .rules{list-style:none;margin:16px 0 22px;display:grid;gap:10px}
+  .rules li{display:flex;gap:10px;font-size:14px;color:#2c3550;align-items:flex-start}
+  .rules b{color:var(--accent)}
+  .dot{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+       display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 auto;margin-top:1px}
+  .btn{
+    border:0;border-radius:11px;padding:13px 22px;font-size:14.5px;font-weight:650;cursor:pointer;
+    background:var(--accent);color:#fff;font-family:inherit;transition:.15s;display:inline-block
+  }
+  .btn:hover{filter:brightness(1.07)}
+  .btn.ghost{background:#fff;color:var(--accent);border:1.5px solid #d9dcf7}
+  .btn.ghost:hover{background:var(--accent-soft)}
+  .btn.soft{background:var(--accent-soft);color:var(--accent);border:1px solid #dcdefb}
+  .btn.wide{width:100%;text-align:center}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+  .mt16{margin-top:16px}
+  /* exam */
+  .exambar{
+    position:sticky;top:0;z-index:30;background:rgba(244,246,251,.93);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:18px
+  }
+  .exambar .inner{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .qcount{font-size:13px;color:var(--muted);font-weight:600}
+  .qcount b{color:var(--ink)}
+  #timer{
+    font-variant-numeric:tabular-nums;font-weight:750;font-size:16px;letter-spacing:.5px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 14px;color:var(--ink)
+  }
+  #timer.warn{color:var(--warn);border-color:#f7dfb4;background:var(--warn-soft)}
+  #timer.danger{color:var(--bad);border-color:#f6cdd5;background:var(--bad-soft);animation:pulse 1.2s infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .progressline{height:4px;background:#e6e9f5;border-radius:99px;overflow:hidden;margin-top:8px}
+  .progressline i{display:block;height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);width:0;transition:width .3s}
+  .qbox{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px;margin-bottom:16px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+       color:var(--accent);background:var(--accent-soft);padding:4px 9px;border-radius:7px;margin-bottom:14px}
+  .qtext{font-size:16px;font-weight:650;line-height:1.5;margin-bottom:18px}
+  .opts{display:grid;gap:9px}
+  .opt{
+    display:flex;gap:11px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;
+    padding:12px 14px;cursor:pointer;font-size:14.5px;background:#fff;transition:.13s;line-height:1.45
+  }
+  .opt:hover{border-color:#c3c9f0;background:#fafbff}
+  .opt.sel{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+  .opt .ltr{
+    flex:0 0 auto;width:24px;height:24px;border-radius:7px;background:#f1f3fa;color:#5b6480;
+    display:grid;place-items:center;font-weight:700;font-size:12.5px
+  }
+  .opt.sel .ltr{background:var(--accent);color:#fff}
+  .footnav{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .navright{display:flex;gap:8px}
+  .flagbtn{border:1.5px solid #f1d9a8;background:var(--warn-soft);color:#9a6400;border-radius:11px;
+           padding:11px 15px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit}
+  .flagbtn.on{background:var(--warn);color:#fff;border-color:var(--warn)}
+  .gridpanel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+  .grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .gnum{
+    width:36px;height:36px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:700;color:#5b6480;cursor:pointer;font-family:inherit;transition:.12s
+  }
+  .gnum:hover{border-color:#c3c9f0}
+  .gnum.ans{background:var(--accent-soft);border-color:#c7caf5;color:var(--accent)}
+  .gnum.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+  .gnum.flg{border-color:var(--warn);color:#9a6400;background:var(--warn-soft)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:12px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .sw{width:11px;height:11px;border-radius:3px;border:1.5px solid var(--line);display:inline-block}
+  .sw.a{background:var(--accent-soft);border-color:#c7caf5}
+  .sw.c{background:var(--accent);border-color:var(--accent)}
+  .sw.f{background:var(--warn-soft);border-color:var(--warn)}
+  /* result */
+  .scorewrap{text-align:center;padding:8px 0 4px}
+  .ring{
+    width:170px;height:170px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;
+    background:conic-gradient(var(--accent) calc(var(--p) * 1%), #eceffa 0);
+  }
+  .ring .in{width:136px;height:136px;border-radius:50%;background:#fff;display:grid;place-items:center;align-content:center}
+  .ring .num{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .ring .lbl{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px;letter-spacing:.5px}
+  .grade{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:6px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}
+  .stat{background:#f8f9fe;border:1px solid var(--line);border-radius:12px;padding:13px 8px;text-align:center}
+  .stat b{display:block;font-size:20px;font-weight:800;letter-spacing:-.3px}
+  .stat span{font-size:11.5px;color:var(--muted);font-weight:600}
+  .stat.ok b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.mut b{color:var(--muted)}
+  /* review */
+  .rev{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .revhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+  .revno{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.6px}
+  .pill{font-size:11px;font-weight:750;padding:3px 9px;border-radius:99px;letter-spacing:.3px}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .pill.bad{background:var(--bad-soft);color:var(--bad)}
+  .pill.mut{background:#f0f2f8;color:var(--muted)}
+  .revq{font-size:14.5px;font-weight:650;margin-bottom:12px;line-height:1.5}
+  .revopt{font-size:13.5px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);margin-bottom:6px;color:#5b6480;display:flex;gap:8px}
+  .revopt .l{font-weight:800;flex:0 0 auto}
+  .revopt.correct{background:var(--ok-soft);border-color:#bfe8d5;color:#0b6b48;font-weight:650}
+  .revopt.wrong{background:var(--bad-soft);border-color:#f6cdd5;color:#a01e35;font-weight:650}
+  .src{margin-top:12px;border-left:3px solid #d9dcf7;background:#fafbff;padding:10px 12px;border-radius:0 9px 9px 0}
+  .src .h{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+  .src p{font-size:13px;color:#4a5573;font-style:italic;line-height:1.5}
+  .filterbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .fbtn{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 14px;font-size:13px;
+        font-weight:650;cursor:pointer;font-family:inherit;color:#5b6480}
+  .fbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .hidden{display:none!important}
+  @media(max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .qbox,.card{padding:18px}
+    .qtext{font-size:15px}
+    header.top h1{font-size:17px}
+    .ring{width:150px;height:150px}.ring .in{width:120px;height:120px}.ring .num{font-size:34px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Simulasi Ujian — WZT (Wartegg Zeichen Test)</h1>
+    <p>PPT 2 dari 7 &middot; Wartegg Zeichen Test &middot; Pilihan Ganda</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- START -->
+  <section id="view-start" class="card">
+    <h2>Aturan pengerjaan</h2>
+    <p class="lead">Kuis ini dibuat langsung dari isi PPT 2. Kalimat soal dan pilihan jawaban memakai kalimat asli dari slide, jadi bacaanmu terbantu persis seperti materi aslinya.</p>
+    <ul class="rules" id="startRules"></ul>
+    <div class="btn-row">
+      <button class="btn" onclick="startExam(true)">Mulai dengan Timer</button>
+      <button class="btn ghost" onclick="startExam(false)">Latihan tanpa Timer</button>
+    </div>
+    <p class="lead mt16" style="font-size:12.5px">Tips: jawaban tersimpan otomatis. Kamu bisa lompat antar soal lewat panel nomor di bawah.</p>
+  </section>
+
+  <!-- EXAM -->
+  <section id="view-exam" class="hidden">
+    <div class="exambar">
+      <div class="inner">
+        <div>
+          <div class="qcount">Soal <b><span id="curNo">1</span></b> dari <b><span id="totNo"></span></b></div>
+          <div class="progressline"><i id="progFill"></i></div>
+        </div>
+        <div id="timer">--:--</div>
+      </div>
+    </div>
+
+    <div class="qbox">
+      <span class="tag" id="qTag">Slide 1</span>
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="footnav">
+        <div class="navright">
+          <button class="btn ghost" onclick="go(-1)" id="btnPrev">&larr; Sebelumnya</button>
+        </div>
+        <div class="navright">
+          <button class="flagbtn" id="btnFlag" onclick="toggleFlag()">Tandai ragu</button>
+          <button class="btn" onclick="go(1)" id="btnNext">Berikutnya &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gridpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">Navigasi soal</h3>
+        <button class="btn soft" style="padding:9px 16px;font-size:13px" onclick="confirmSubmit()">Kumpulkan jawaban</button>
+      </div>
+      <div class="grid" id="qGrid"></div>
+      <div class="legend">
+        <span><i class="sw"></i> belum dijawab</span>
+        <span><i class="sw a"></i> sudah dijawab</span>
+        <span><i class="sw f"></i> ragu-ragu</span>
+        <span><i class="sw c"></i> soal aktif</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="view-result" class="hidden">
+    <div class="card">
+      <div class="scorewrap">
+        <div class="ring" id="ring" style="--p:0"><div class="in"><div class="num" id="scoreNum">0</div><div class="lbl">SKOR / 100</div></div></div>
+        <div class="grade" id="gradeTxt"></div>
+        <p class="lead" id="gradeNote"></p>
+      </div>
+      <div class="stats">
+        <div class="stat ok"><b id="stOk">0</b><span>Benar</span></div>
+        <div class="stat bad"><b id="stBad">0</b><span>Salah</span></div>
+        <div class="stat mut"><b id="stKos">0</b><span>Kosong</span></div>
+        <div class="stat"><b id="stTime">0:00</b><span>Waktu</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="showReview('all')">Review jawaban</button>
+        <button class="btn ghost" onclick="showReview('wrong')">Lihat yang salah saja</button>
+        <button class="btn soft" onclick="resetAll()">Ulangi ujian</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section id="view-review" class="hidden">
+    <div class="filterbar">
+      <button class="fbtn on" data-f="all" onclick="filterReview('all',this)">Semua <span id="cAll"></span></button>
+      <button class="fbtn" data-f="wrong" onclick="filterReview('wrong',this)">Salah &amp; kosong</button>
+      <button class="fbtn" data-f="right" onclick="filterReview('right',this)">Benar</button>
+      <button class="fbtn" style="margin-left:auto" onclick="resetAll()">Ulangi ujian</button>
+    </div>
+    <div id="revList"></div>
+  </section>
+
+</div>
+
+<script>
+const DATA = [{"s": 2, "q": "Dasar teori Tes Wartegg dikemukakan oleh…", "o": ["F. Krueger & F. Sander", "Ehrig Wartegg", "G. Marian Kinget", "Roivainen & Prabowo"], "a": 0, "k": "F. Krueger & F. Sander"}, {"s": 2, "q": "Tes Wartegg diteruskan oleh tokoh dari Jerman bernama…", "o": ["Ehrig Wartegg", "F. Krueger", "F. Sander", "G. Marian Kinget"], "a": 0, "k": "Ehrig  Wartegg dari Jerman"}, {"s": 2, "q": "Tes Wartegg Zeichen Test (WZT) disempurnakan secara kuantitatif oleh…", "o": ["G. Marian Kinget", "Ehrig Wartegg", "F. Krueger", "F. Sander"], "a": 0, "k": "Disempurnakan oleh | G. Marian Kinget | (secara\tkuantitatif)"}, {"s": 2, "q": "Penyempurnaan Tes Wartegg oleh G. Marian Kinget dilakukan secara…", "o": ["Kuantitatif", "Kualitatif", "Proyektif", "Longitudinal"], "a": 0, "k": "(secara\tkuantitatif)"}, {"s": 2, "q": "Secara keseluruhan, perkembangan Tes Wartegg berada pada tahun…", "o": ["1920-1930-an", "1900-1910-an", "1940-1950-an", "1960-1970-an"], "a": 0, "k": "** Secara keseluruhan Perkembangan tes ini berada  pada tahun 1920-1930-an (Prabowo, dkk 2016)"}, {"s": 2, "q": "Keterangan mengenai rentang tahun perkembangan Tes Wartegg dalam PPT ini dikutip dari…", "o": ["Prabowo, dkk (2016)", "Roivainen (2009)", "Nieizel & Bemstein (1987)", "Kinget (1952)"], "a": 0, "k": "(Prabowo, dkk 2016)"}, {"s": 3, "q": "Tes Wartegg didasarkan pada dua landasan teori, yaitu…", "o": ["Psikologi Gestalt dan Psikoanalisis", "Behaviorisme dan Psikometri", "Humanistik dan Kognitif", "Strukturalisme dan Fungsionalisme"], "a": 0, "k": "Didasarkan pada Psikologi Gestalt dan Psikoanalisis"}, {"s": 3, "q": "Dalam Psikologi Gestalt, objek pengalaman ditambah pengalaman subjek akan membentuk…", "o": ["Struktur kepribadian individu", "Skor kuantitatif kepribadian", "Norma kelompok", "Respon yang bebas"], "a": 0, "k": "Objek pengalaman + pengalaman  subjek = struktur kepribadian individu"}, {"s": 3, "q": "Psikologi Gestalt berasumsi bahwa objek atau gambar dalam tes Wartegg adalah…", "o": ["Sebuah kesatuan yang merupakan cerminan dari pengalaman subjek", "Kumpulan bagian yang berdiri sendiri", "Stimulus yang tidak bermakna", "Alat ukur kecerdasan"], "a": 0, "k": "adalah sebuah kesatuan yang merupakan cerminan dari  pengalaman subjek"}, {"s": 3, "q": "Dalam landasan Psikoanalisis, manusia dibentuk oleh…", "o": ["Pengalaman masa lalunya yang tidak bisa lepas dari dirinya saat ini", "Norma sosial lingkungan sekitarnya", "Faktor genetik semata", "Penguatan dan hukuman"], "a": 0, "k": "Manusia dibentuk oleh pengalaman masa lalunya | yang tidak bisa lepas dari dirinya saat ini"}, {"s": 3, "q": "Pernyataan bahwa gambar dalam tes Wartegg merupakan cerminan pengalaman subjek dikutip dari…", "o": ["Roivainen (2009)", "Prabowo, dkk (2016)", "Nieizel & Bemstein (1987)", "Kinget (1952)"], "a": 0, "k": "(Roivainen, 2009)"}, {"s": 4, "q": "Tes Wartegg merupakan salah satu asesmen tes psikologi yang digunakan untuk…", "o": ["Evaluasi kepribadian (personality assessment)", "Mengukur inteligensi", "Mengukur bakat numerik", "Menilai prestasi belajar"], "a": 0, "k": "digunakan untuk evaluasi  kepribadian (personality assessment)"}, {"s": 4, "q": "Tes Wartegg menggali aspek-aspek psikologis seseorang dengan cara…", "o": ["Menampilkan struktur kepribadian berdasarkan respon yang diberikan", "Mewawancarai subjek secara mendalam", "Menghitung skor jawaban benar", "Mengobservasi perilaku di lapangan"], "a": 0, "k": "Tes wartegg menggali aspek-aspek psikologis  seseorang dengan menampilkan struktur  kepribadian berdasarkan respon yang diberikan."}, {"s": 4, "q": "Tes WZT merupakan tes proyektif yang kombinasi dari teknik…", "o": ["Completions dan expressions", "Associations dan ordering", "Constructions dan choice", "Expressions dan ordering"], "a": 0, "k": "kombinasi dari teknik  completions dan expressions"}, {"s": 4, "q": "Alasan WZT disebut kombinasi teknik completions dan expressions adalah karena…", "o": ["Telah memiliki stimulus-stimulus yang perlu diselesaikan dengan mengekspresikan suatu gambar", "Tidak memiliki stimulus sama sekali", "Subjek bebas menuliskan cerita", "Subjek memilih jawaban yang tersedia"], "a": 0, "k": "telah memiliki stimulus-stimulus yang perlu  diselesaikan dengan mengekspresikan suatu gambar"}, {"s": 4, "q": "Pernyataan bahwa WZT merupakan kombinasi teknik completions dan expressions dikutip dari…", "o": ["Nieizel & Bemstein (1987)", "Roivainen (2009)", "Prabowo, dkk (2016)", "Kinget (1952)"], "a": 0, "k": "(nieizel & bemstein,1987)"}, {"s": 6, "q": "Tujuan Tes Wartegg adalah untuk menggali fungsi dasar kepribadian, yaitu…", "o": ["Emosi, imajinasi, dinamika, kontrol dan fungsi realitas individu", "Kecerdasan, bakat, minat dan prestasi", "Persepsi, memori, atensi dan bahasa", "Motivasi, need, nilai dan sikap"], "a": 0, "k": "Untuk menggali fungsi dasar kepribadian (emosi, imajinasi,  dinamika, kontrol dan fungsi realitas individu)"}, {"s": 6, "q": "Aspek “Personality” pada skema Wartegg diartikan sebagai…", "o": ["Skema kepribadian Wartegg", "Pendekatan menyeluruh untuk interpretasi", "Evaluasi lebih lanjut", "Kemampuan menghayati stimulus"], "a": 0, "k": "Personality | Skema kepribadian  Wartegg"}, {"s": 6, "q": "Aspek “Holistic Approach” pada Wartegg diartikan sebagai…", "o": ["Pendekatan menyeluruh untuk interpretasi", "Skema kepribadian Wartegg", "Evaluasi lebih lanjut", "Pengukuran kuantitatif"], "a": 0, "k": "Holistic Approach | Pendekatan menyeluruh  untuk\tinterpretasi"}, {"s": 6, "q": "Aspek “Other Evaluation” pada Wartegg digunakan untuk…", "o": ["Evaluasi lebih lanjut", "Menghitung reliabilitas", "Menetapkan norma usia", "Menilai kecerdasan"], "a": 0, "k": "Other Evaluation | Untuk evaluasi  lebih lanjut."}, {"s": 7, "q": "Empat dimensi fungsi pada skema kepribadian Wartegg adalah…", "o": ["Emotion, Imagination, Intellect, Activity", "Emotion, Motivation, Intellect, Attitude", "Perception, Imagination, Memory, Activity", "Emotion, Intellect, Social, Reality"], "a": 0, "k": "Emotion\nImagination\nIntellect\nActivity"}, {"s": 7, "q": "Istilah yang dipakai untuk kutub “Outgoing” pada dimensi Emotion adalah…", "o": ["Extraversion", "Introversion", "Combining", "Controlled"], "a": 0, "k": "Extraversion | Introversion"}, {"s": 7, "q": "Istilah yang dipakai untuk kutub “Seclusive” pada dimensi Emotion adalah…", "o": ["Introversion", "Extraversion", "Speculative", "Practical"], "a": 0, "k": "Extraversion | Introversion"}, {"s": 7, "q": "“Persepsi dan orientasi pada realitas” merupakan penjelasan untuk kutub…", "o": ["Combining", "Speculative", "Controlled", "Seclusive"], "a": 0, "k": "Persepsi dan orientasi pada realitas"}, {"s": 7, "q": "“Orisinil, abstrak, filosofis, emosional” merupakan penjelasan untuk kutub…", "o": ["Creative", "Practical", "Combining", "Dynamic"], "a": 0, "k": "Orisinil, abstrak, filosofis, emosional"}, {"s": 7, "q": "“Persepsi, observasi dengan kesadaran penuh (inductive reasoning)” merupakan penjelasan untuk kutub…", "o": ["Practical", "Speculative", "Creative", "Outgoing"], "a": 0, "k": "Persepsi, observasi dengan kesadaran penuh  (inductive reasoning)"}, {"s": 7, "q": "“Teoritis, prinsip, kurang realitis” merupakan penjelasan untuk kutub…", "o": ["Speculative", "Practical", "Combining", "Controlled"], "a": 0, "k": "Teoritis, prinsip, kurang realitis"}, {"s": 7, "q": "“Dorongan energi dari biasa sampai impulsif” merupakan penjelasan untuk kutub…", "o": ["Dynamic", "Controlled", "Creative", "Outgoing"], "a": 0, "k": "Dorongan energi dari biasa sampai impulsif"}, {"s": 7, "q": "“Tingkah laku terkendali” merupakan penjelasan untuk kutub…", "o": ["Controlled", "Dynamic", "Practical", "Combining"], "a": 0, "k": "Tingkah laku terkendali"}, {"s": 8, "q": "Individu yang berorientasi pada dunia luar dan mudah berhubungan dengan orang lain termasuk kategori…", "o": ["Open atau Outgoing (extraversion)", "Seclusive (introversion)", "Combining", "Speculative"], "a": 0, "k": "Open atau Outgoing (extraversion)"}, {"s": 8, "q": "Ciri “penggembira, easy going dan bebas dari ketegangan” pada dimensi Emotion terdapat pada…", "o": ["Open atau Outgoing (extraversion)", "Seclusive (introversion)", "Controlled", "Practical"], "a": 0, "k": "mereka  biasanya penggembira, easy going dan bebas dari ketegangan"}, {"s": 8, "q": "Kelebihan sekaligus kelemahan individu Open/Outgoing menurut slide adalah…", "o": ["Memudahkan penyesuaian diri tetapi cenderung membuat mereka secara emosional agak datar", "Sulit menyesuaikan diri tetapi emosinya dalam", "Sangat sensitif dan mudah depresi", "Selalu tegang dan kaku"], "a": 0, "k": "yang memudahkan penyesuaian dirinya tetapi cenderung membuat mereka secara emosional agak datar"}, {"s": 8, "q": "Individu yang kurang berorientasi pada lingkungan di luar dirinya dan perhatiannya lebih terarah pada dirinya sendiri termasuk…", "o": ["Seclusive (introversion)", "Open atau Outgoing (extraversion)", "Dynamic", "Practical"], "a": 0, "k": "Kurang berorientasi pada lingkungan di luar dirinya, perhatiannya lebih terarah pada dirinya  sendiri"}, {"s": 8, "q": "Ciri individu Seclusive (introversion) menurut slide adalah…", "o": ["Sangat sensitive dan mudah menjadi terlalu sensitive atau depresi", "Penggembira dan bebas dari ketegangan", "Emosional agak datar", "Mudah bergaul dengan siapa saja"], "a": 0, "k": "sangat sensitive dan  mudah menjadi terlalu sensitive atau depresi"}, {"s": 9, "q": "Individu yang mengambil materi langsung dari sekelilingnya dan diorganisir sesuai standar yang obyektif termasuk imajinasi…", "o": ["Combining", "Seclusive", "Speculative", "Creative"], "a": 0, "k": "Individu mengambil materi langsung dari sekelilingnya dan diorganisir sesuai\t dengan standar  yang obyektif"}, {"s": 9, "q": "Imajinasi Combining didasarkan atas…", "o": ["Persepsi dan berorientasi pada realitas", "Simbol-simbol mistik", "Pengalaman masa lalu yang terpendam", "Prinsip-prinsip teoretis"], "a": 0, "k": "Imajinasi ini  didasarkan atas persepsi dan berorientasi pada realitas."}, {"s": 9, "q": "Imajinasi Seclusive (introversion) ditandai dengan…", "o": ["Kurangnya hubungan dengan realitas", "Sangat terikat pada fakta konkrit", "Penalaran induktif yang teratur", "Kemampuan observasi dengan kesadaran penuh"], "a": 0, "k": "Ditandai dengan kurangnya hubungan dengan realitas."}, {"s": 9, "q": "Individu dengan imajinasi Seclusive lebih menyukai hal-hal…", "o": ["Abstrak atau simbol-simbol emosional, filosifis atau mistikly", "Konkrit dan faktual", "Praktis dan teknis", "Teratur dan terukur"], "a": 0, "k": "Individu lebih menyukai hal-hal abstrak  atau simbol-simbol emosional, filosifis atau mistikly."}, {"s": 9, "q": "Apabila berlebihan, imajinasi Seclusive akan menjadi…", "o": ["Hambatan untuk menyesuaikan diri dengan kehidupan sehari-hari", "Sumber kreativitas tanpa batas", "Pendorong prestasi kerja", "Penguat hubungan sosial"], "a": 0, "k": "Kalau berlebihan imajinasi ini akan  merupakan hambatan untuk menyesuaikan diri dengan kehidupan sehari-hari."}, {"s": 10, "q": "Individu dengan Practical intellect bertindak terutama berdasarkan…", "o": ["Persepsi dan observasi", "Teori dan prinsip", "Simbol dan mistik", "Intuisi dan perasaan"], "a": 0, "k": "Individu dengan practical intellect bertindak terutama berdasarkan persepsi, observasi"}, {"s": 10, "q": "Orientasi individu dengan Practical intellect tertuju pada…", "o": ["Fakta, hal-hal yang konkrit dan penalaran induktif", "Prinsip, teori dan hal yang tidak praktis", "Simbol-simbol abstrak", "Pengalaman masa lalu"], "a": 0, "k": "Orientasinya tertuju pada fakta, hal-hal yang  konkrit dan penalaran induktif."}, {"s": 10, "q": "Practical intellect ditandai antara lain oleh…", "o": ["Cara berpikir yang teratur", "Cara berpikir yang melompat-lompat", "Kecenderungan spekulatif", "Kurangnya observasi"], "a": 0, "k": "ditandai antara lain oleh cara berpikir yang teratur"}, {"s": 10, "q": "Individu dengan Speculative intellect lebih menekankan…", "o": ["Prinsip-prinsip, penalaran, teori daripada fakta", "Fakta dan observasi konkrit", "Hal-hal yang praktis", "Penalaran induktif"], "a": 0, "k": "Mengutamakan prinsip-prinsip, penalaran, teori lebih ditekankan daripada fakta,  observasi dan hal yang tidak praktis."}, {"s": 11, "q": "Aktivitas dinamis mencakup semua bentuk dan tingkat dorongan energi dari yang…", "o": ["Mobil sampai yang impulsive", "Tenang sampai terkendali", "Teratur sampai kaku", "Praktis sampai spekulatif"], "a": 0, "k": "mencakup semua bentuk dan tingkat dorongan energi dari yang\tmobil  sampai yang impulsive"}, {"s": 11, "q": "Ciri individu dengan aktivitas Dynamic adalah…", "o": ["Senang akan hal-hal yang baru, percaya diri, antusias, berani", "Menyukai ketenangan dan keteraturan", "Membuat perencanaan sebelum bertindak", "Perhatiannya terpusat dan kaku"], "a": 0, "k": "Individu dengan aktivitas yang dinamis senang akan hal-hal yang\tbaru,  percaya diri, antusias, berani."}, {"s": 11, "q": "Individu dengan aktivitas Dynamic memiliki energi yang memungkinkan…", "o": ["Melakukan bermacam-macam aktivitas dalam waktu yang sama", "Menyelesaikan satu tugas sampai tuntas", "Menghindari aktivitas baru", "Bekerja hanya bila diperintah"], "a": 0, "k": "Individu memiliki energi yang memungkinkan melakukan  bermacam-macam aktivitas dalam waktu yang sama."}, {"s": 11, "q": "Aktivitas Controlled ditandai dengan…", "o": ["Konsistensi bertingkah laku dan kemampuan mengambil keputusan secara tegas", "Impulsivitas dan kegelisahan", "Keinginan mencoba hal baru terus-menerus", "Ketergantungan pada orang lain"], "a": 0, "k": "Aktivitas yang ditandai dengan konsistensi bertingkah laku dan kemampuan untuk mengambil  keputusan secara tegas."}, {"s": 11, "q": "Individu dengan aktivitas Controlled cenderung…", "o": ["Membuat perencanaan sebelum bertindak serta menyukai ketenangan dan keteraturan", "Bertindak tanpa perencanaan", "Menyukai hal-hal baru dan keramaian", "Mengabaikan detail pekerjaan"], "a": 0, "k": "Individu membuat perencanaan sebelum bertindak. Perhatiannya  terpusat, mereka menyukai ketenangan dan keteraturan."}, {"s": 12, "q": "Holistic Approach dalam Wartegg dilakukan melalui…", "o": ["Interpretasi menyeluruh yang bisa dilihat dari gambar subjek", "Penghitungan skor tiap kotak", "Wawancara terstruktur", "Observasi perilaku harian"], "a": 0, "k": "Pendekatan melalui interpretasi menyeluruh bisa dilihat  dari gambar\tsubjek."}, {"s": 12, "q": "Melalui interpretasi menyeluruh, psikolog dapat melihat…", "o": ["Persepsi, emosi, asosiasi dengan stimulus, kecenderungan, minat, dan pekerjaan subjek", "Hanya skor kepribadian", "Hanya usia mental subjek", "Hanya tingkat kecerdasan"], "a": 0, "k": "Psikolog bisa menginterpretasi untuk melihat persepsi,  emosi,\tasosiasi dengan stimulus,  kecenderungan,  minat, dan pekerjaan subjek."}, {"s": 12, "q": "Fungsi Other Evaluation pada Wartegg adalah…", "o": ["Membantu memberikan data tambahan dan dapat digunakan untuk berbagai bidang psikologi", "Menggantikan seluruh alat tes lain", "Menentukan norma baru", "Mengukur inteligensi secara tunggal"], "a": 0, "k": "Bisa untuk membantu memberikan data tambahan  WZT dapat digunakan untuk berbagai bidang psikologi"}, {"s": 13, "q": "Tahapan administrasi Tes Wartegg terdiri dari…", "o": ["Persiapan, Pelaksanaan, Evaluasi", "Persiapan, Skoring, Pelaporan", "Instruksi, Wawancara, Observasi", "Perencanaan, Validasi, Interpretasi"], "a": 0, "k": "PERSIAPAN\nPELAKSANAAN\nEVALUASI"}, {"s": 14, "q": "Pada tahap persiapan, hal utama yang perlu diperhatikan adalah…", "o": ["Kesiapan Fisik dan Psikis", "Kecepatan waktu administrasi", "Jumlah peserta tes", "Skor akhir peserta"], "a": 0, "k": "Kesiapan Fisik dan Psikis"}, {"s": 14, "q": "Setting ruangan pada persiapan tes Wartegg mencakup…", "o": ["Pencahayaan ruangan, sirkulasi udara, dll", "Jumlah kursi peserta", "Luas meja penguji", "Warna dinding ruangan"], "a": 0, "k": "Pengcahayaan Ruangan, Sirkulasi Udara, dll"}, {"s": 14, "q": "Hal yang harus dihindari pada saat persiapan tes Wartegg adalah…", "o": ["Stimulus yang mengganggu hasil tes", "Pencahayaan ruangan yang cukup", "Sirkulasi udara yang baik", "Kesiapan fisik testee"], "a": 0, "k": "Hindari Stimulus yang  mengganggu hasil tes"}, {"s": 15, "q": "Pada tahap pelaksanaan, tester memberikan lembar test dan…", "o": ["Pensil HB pada testee", "Pulpen hitam pada testee", "Pensil warna pada testee", "Penghapus pada testee"], "a": 0, "k": "Tester memberikan lembar test dan pensil HB pada testee"}, {"s": 15, "q": "Hal pertama yang diminta kepada testee sebelum mengerjakan adalah…", "o": ["Menuliskan identitasnya yang tertera di lembar tes", "Menebalkan seluruh garis stimulus", "Menghitung jumlah kotak", "Menuliskan judul gambar"], "a": 0, "k": "Testee diminta menuliskan Identitasnya yang tertera di lembar tes"}, {"s": 15, "q": "Menurut instruksi, pada lembar tes testee akan melihat…", "o": ["8 kotak, dalam setiap kotak terdapat tanda", "6 kotak, dalam setiap kotak terdapat tanda", "10 kotak tanpa tanda", "4 kotak dengan gambar lengkap"], "a": 0, "k": "anda akan melihat 8 kotak,  dalam setiap kotak terdapat tanda"}, {"s": 15, "q": "Menurut instruksi, tanda-tanda di dalam kotak…", "o": ["Tidak memiliki arti khusus, hanya merupakan bagian dari gambar yang harus dibuat", "Merupakan kunci jawaban yang harus diikuti", "Harus dihapus sebelum menggambar", "Menunjukkan tingkat kesulitan kotak"], "a": 0, "k": "Tanda-tanda ini tidak memiliki arti Khusus,  hanya merupakan bagian dari gambar  yang harus anda buat didalam kotak."}, {"s": 15, "q": "Menurut instruksi, testee boleh memulai menggambar…", "o": ["Dari kotak mana saja, tidak harus berurutan", "Hanya dari kotak nomor 1", "Hanya dari kotak yang paling mudah", "Hanya dari kotak nomor 8"], "a": 0, "k": "anda boleh menggambar apa saja dan  boleh memulai dari kotak mana saja, tidak  harus berurutan."}, {"s": 15, "q": "Setelah selesai menggambar, testee harus…", "o": ["Mencantumkan nomor berdasarkan urutan pada setiap gambar yang telah dibuat", "Menghapus tanda stimulus", "Menyerahkan gambar tanpa keterangan", "Menuliskan skor penilaian sendiri"], "a": 0, "k": "Anda harus mencantumkan nomor  berdasarkan urutan pada setiap gambar  yang telah selesai anda buat"}, {"s": 15, "q": "Keterangan/judul gambar dituliskan sesuai…", "o": ["Urutan subjek dalam menggambar", "Nomor kotak yang tercetak", "Tingkat kesulitan gambar", "Instruksi penguji"], "a": 0, "k": "Menuliskan keterangan/judul gambar  sesuai urutan subjek dalam menggambar."}, {"s": 15, "q": "Tanda (+) diberikan pada gambar yang…", "o": ["Subjek sukai", "Paling tidak disukai subjek", "Subjek anggap paling mudah", "Subjek anggap paling sukar"], "a": 0, "k": "(+) Pada gambar yang subjek sukai"}, {"s": 15, "q": "Tanda (-) diberikan pada gambar yang…", "o": ["Paling tidak disukai subjek", "Subjek sukai", "Subjek anggap paling mudah", "Subjek anggap paling sukar"], "a": 0, "k": "(-) Pada gambar yang paling tidak disukai"}, {"s": 15, "q": "Tanda (M) diberikan pada gambar yang subjek anggap…", "o": ["Paling mudah", "Paling sukar", "Paling disukai", "Paling tidak disukai"], "a": 0, "k": "(M) Pada gambar yang subjek anggap  paling mudah"}, {"s": 15, "q": "Tanda (S) diberikan pada gambar yang subjek anggap…", "o": ["Paling sukar", "Paling mudah", "Paling disukai", "Paling tidak disukai"], "a": 0, "k": "(S) Pada gambar yang subjek anggap  paling sukar"}, {"s": 16, "q": "Stimulus Drawing Relation (SDR) adalah dasar interpretasi yang melihat…", "o": ["Hubungan gambar subjek dengan stimulus yang ada/sensibilitas testee", "Isi gambar yang dibuat subjek", "Cara pelaksanaan menggambar", "Luas bidang yang terpakai"], "a": 0, "k": "Melihat hubungan gambar  subjek dgn stimulus yang ada /\t sensibilitas testee"}, {"s": 16, "q": "Dalam Adaptive Emphasis, kategori “Indifference” ditandai dengan…", "o": ["S diabaikan", "S dihadapi dengan baik", "S dihadapi sangat baik", "S dimodifikasi seluruhnya"], "a": 0, "k": "IndiffeRence\n-> S diabaikan"}, {"s": 16, "q": "Dalam Adaptive Emphasis, stimulus yang “dihadapi dengan baik” termasuk kategori…", "o": ["Menghadapi stimulus secara wajar dan memanfaatkannya", "Mengabaikan stimulus", "Menghadapi stimulus sangat baik", "Menolak stimulus"], "a": 0, "k": "-> S dihadapi dgn baik"}, {"s": 16, "q": "Kategori “S dihadapi sangat baik” dalam Adaptive Emphasis menunjukkan…", "o": ["Kemampuan testee mengolah stimulus secara optimal", "Testee mengabaikan stimulus", "Testee tidak menyelesaikan tugas", "Testee menolak stimulus"], "a": 0, "k": "-> S dihadapi sangat baik"}, {"s": 16, "q": "Meneliti isi (content) dilakukan untuk mengetahui…", "o": ["Apa yang digambar oleh testee", "Bagaimana cara testee menggambar", "Berapa lama testee menggambar", "Seberapa luas bidang terpakai"], "a": 0, "k": "Meneliti Isi (content) apa yang\ndigambar oleh testee"}, {"s": 16, "q": "Melalui penelitian isi (content), dapat dilihat…", "o": ["Kecenderungan atau minat testee", "Intensitas garis testee", "Komposisi gambar testee", "Kecepatan kerja testee"], "a": 0, "k": "Dapat melihat kecenderungan\natau minat testee"}, {"s": 16, "q": "Meneliti cara pelaksanaan (execution) meliputi peninjauan…", "o": ["Taraf bentuk, tarikan, intensitas garis, luas gambar, pembayangan, komposisi", "Nama, usia, dan pekerjaan subjek", "Isi dan tema gambar subjek", "Hubungan gambar dengan stimulus"], "a": 0, "k": "Meninjau taraf bentuk,  tarikan, dan\tintesitas garis,  luas gambar, pembayangan,  komposisi gambar secara\tkeseluruhan."}, {"s": 17, "q": "Stimulus “dua garis miring berhadapan” sangat kuat mengesankan gagasan mengenai…", "o": ["Konflik dan dinamika", "Ketenangan dan fleksibilitas", "Kekakuan dan keteraturan", "Materi yang keras"], "a": 0, "k": "Dua garis miring berhadapan: Sangat  kuat mengesankan gagasan  mengenai konflik dan\tdinamika."}, {"s": 17, "q": "Stimulus “garis vertikal-horizontal” memberi kesan…", "o": ["Sangat apa adanya, kaku, bersahaja, tidak menarik dan tidak memancing inspirasi", "Sangat halus, bundar dan lentur", "Hidup, bergerak dan bebas", "Berat, padat dan statik"], "a": 0, "k": "Garis vertikal-horizontal: Sangat  apa adanya,\tkaku, bersahaja,  tidak menarik dan tidak memancing inspirasi."}, {"s": 17, "q": "Stimulus “titik-titik setengah lingkaran” mengesankan sesuatu yang…", "o": ["Sangat halus, bundaran yang mungil dan lentur", "Kaku, keras dan teratur", "Berat, padat dan menyudut", "Hidup, menggelepar dan mengalir"], "a": 0, "k": "Titik-titik setengah lingkaran:  Mengesankan\tsesuatu yang sangat  halus, bundaran yang\tmungil dan lentur"}, {"s": 17, "q": "Stimulus “garis melengkung” memiliki kualitas…", "o": ["Kebundaran dan fleksibilitas, tampak tenang, besar dan mudah dihadapi", "Kekakuan dan kekerasan", "Konflik dan dinamika", "Berat dan statik"], "a": 0, "k": "Garis melengkung:   Memiliki kualitas  kebundaran dan fleksibilitas, tampak tenang, besar dan mudah dihadapi"}, {"s": 17, "q": "Stimulus “titik” memiliki karakteristik…", "o": ["Kecil, ringan, bundar, dan sentral", "Besar, berat, dan menyudut", "Panjang, lurus, dan kaku", "Bergelombang, bebas, dan hidup"], "a": 0, "k": "Titik: Memiliki karakteristik kecil,  ringan,\tbundar, dan sentral"}, {"s": 17, "q": "Stimulus “garis kecil bergelombang” mensugestikan sesuatu yang…", "o": ["Hidup, bergerak, bebas, menggelepar, tumbuh, atau mengalir", "Kaku, keras, dan teratur", "Berat, padat, dan statik", "Halus, bundar, dan lentur"], "a": 0, "k": "Garis kecil bergelombang: Mensugestikan  sesuatu yang hidup, bergerak, bebas,  menggelepar, tumbuh, atau mengalir."}, {"s": 17, "q": "Stimulus “tiga garis vertikal” mengekspresikan kualitas…", "o": ["Kekakuan, kekerasan, keteraturan, dan kemajuan", "Kebundaran dan fleksibilitas", "Konflik dan dinamika", "Kelembutan dan kelenturan"], "a": 0, "k": "Tiga garis vertikal:\tMengekspresikan  kualitas\tkekakuan, kekerasan, keteraturan, dan\tkemajuan."}, {"s": 17, "q": "Stimulus “segi empat hitam” tampak…", "o": ["Berat, utuh, padat, menyudut dan statik, mengesankan materi yang keras", "Ringan, bundar dan sentral", "Halus, lembut dan lentur", "Hidup, bebas dan mengalir"], "a": 0, "k": "Segi empat hitam: Tampak berat, utuh, padat,\tmenyudut dan statik,  mengesankan materi\tyang keras."}, {"s": 18, "q": "Scribbling didefinisikan sebagai bentuk reaksi yang…", "o": ["Mengabaikan sebagian atau keseluruhan stimulus", "Mengolah stimulus secara optimal", "Menambahkan stimulus baru", "Menghubungkan stimulus dengan realitas"], "a": 0, "k": "Suatu bentuk reaksi yang mengabaikan sebagian atau keseluruhan  stimulus"}, {"s": 18, "q": "Scribbling menyiratkan adanya definisi atau gangguan…", "o": ["Sensibilitas (kepekaan) atau bukti sikap pengabaian terhadap tugas dan harapan penguji", "Motorik halus subjek", "Kecerdasan subjek", "Daya ingat subjek"], "a": 0, "k": "menyiratkan\tadanya definisi atau gangguan  sensibilitas (kepekaan) atau bukti sikap pengabaian terhadap tugas  dan harapan\tpenguji"}, {"s": 18, "q": "Ciri utama Motor Scribbling adalah…", "o": ["Coretan cakar ayam kasar dan garis silang menyilang dengan liar (tidak beraturan)", "Bentuknya lebih halus, lembut, dan kadang-kadang gemulai", "Mengarah pada kecenderungan akan makna dan susunan tertentu", "Pola geometris yang statis dan kaku"], "a": 0, "k": "Motor Scribbling (Ciri utamanya seperti, coretan cakar ayam kasar  dan garis silang menyilang dengan liar\t(tidak beraturan)."}, {"s": 18, "q": "Bentuk scribbling yang lebih halus, lembut, dan kadang-kadang gemulai disebut…", "o": ["Esthetic Scribbling", "Motor Scribbling", "Symbolic Scribbling", "Technical Abstractions"], "a": 0, "k": "Esthetic Scribbling (Bentuknya lebih halus, lembut, dan kadang-  kadang gemulai)."}, {"s": 18, "q": "Scribbling yang ciri utamanya mengarah pada kecenderungan akan makna dan susunan tertentu disebut…", "o": ["Symbolic Scribbling", "Motor Scribbling", "Esthetic Scribbling", "Symmetrical Decorative"], "a": 0, "k": "Symbolic Scribbling (Ciri utamanya mengarah pada kecenderungan  akan makna dan susunan tertentu)"}, {"s": 19, "q": "Gambar yang dikategorikan sebagai Abstraction pada pokoknya terdiri dari…", "o": ["Struktur-struktur garis yang bersifat dekoratif atau intelektual", "Bentuk-bentuk makhluk hidup", "Objek buatan manusia", "Gambar fiksi yang imajinatif"], "a": 0, "k": "Gambar yang dikategorikan sebagai Abstraction (abstraksi) pada  pokoknya terdiri dari struktur-struktur garis yang\tbersifat dekoratif  atau intelektual."}, {"s": 19, "q": "Decorative Abstraction dibedakan berdasarkan…", "o": ["Ciri polanya yang konvensional atau yang orisinal", "Jumlah garis yang dipakai", "Luas bidang gambar", "Intensitas tekanan pensil"], "a": 0, "k": "Decorative Abstraction dibedakan berdasar ciri  polanya yang konvensional atau yang orisinal."}, {"s": 19, "q": "Symmetrical Decorative Abstractions ditandai oleh…", "o": ["Pola geometric biasa, statis, kaku", "Garis-garis dan permukaan yang disusun secara bebas", "Simbol-simbol intelektual dan peralatan teknik", "Gambar makhluk hidup"], "a": 0, "k": "Symmetrical Decorative Abstractions  (pola geometric biasa, statis, kaku)"}, {"s": 19, "q": "Asymmetrical Decorative Abstractions berupa…", "o": ["Garis-garis dan permukaan yang disusun secara bebas", "Pola geometris yang statis dan kaku", "Simbol-simbol intelektual dan peralatan teknik", "Gambar hewan dan manusia"], "a": 0, "k": "Asymmetrical Decorative Abstractions  (berupa garis-garis dan  permukaan yang disusun secara bebas)"}, {"s": 19, "q": "Technical Abstractions ditandai oleh…", "o": ["Simbol-simbol intelektual, gambar geometri dan peralatan teknik", "Pola geometris statis dan kaku", "Garis bebas tanpa aturan", "Gambar fiksi yang mengerikan"], "a": 0, "k": "Technical Abstractions  (simbol-simbol intelektual,ambar geometri  dan peralatan teknik)"}, {"s": 20, "q": "Respon subjek yang termasuk pictures merupakan respon yang…", "o": ["Paling representative dan bervariasi", "Paling jarang muncul", "Paling sulit dinilai", "Paling tidak bermakna"], "a": 0, "k": "Respon subjek yang termasuk pictures adalah respon yang paling\nrepresentative dan bervariasi."}, {"s": 20, "q": "Kategori “Nature” dalam Picture mencakup…", "o": ["Segala sesuatu yang memiliki kualitas kehidupan seperti manusia, hewan, dll", "Segala hal yang dibuat oleh manusia", "Simbol-simbol intelektual", "Pola geometris"], "a": 0, "k": "Nature (segala sesuatu yang memiliki kualitas kehidupan seperti  manusia, hewan, dll)"}, {"s": 20, "q": "Kategori “Object” dalam Picture mencakup…", "o": ["Segala hal yang dibuat oleh manusia", "Segala sesuatu yang memiliki kualitas kehidupan", "Gambar fiksi seperti peri", "Simbol konsep dan ideologi"], "a": 0, "k": "Object (segala hal yang dibuat oleh manusia)"}, {"s": 20, "q": "“Fancy” dalam kategori Fantasy adalah…", "o": ["Gambar fiksi dengan karakter menyenangkan dan menarik hati seperti peri", "Gambar fiksi dengan penampilan suram, kejam, dan mengerikan", "Representasi grafis mengenai konsep dan ideologi", "Gambar benda buatan manusia"], "a": 0, "k": "Fancy (gambar fiksi dengan karakter menyenangkan dan menarik hari  seperti peri)"}, {"s": 20, "q": "“Phantasm” dalam kategori Fantasy adalah…", "o": ["Gambar fiksi dengan penampilan yang suram, kejam, dan mengerikan", "Gambar fiksi dengan karakter menyenangkan seperti peri", "Representasi grafis mengenai konsep dan ideologi", "Gambar makhluk hidup nyata"], "a": 0, "k": "Phantasm (gambar fiksi dengan penampilan yang suram, kejam, dan  mengerikan)"}, {"s": 20, "q": "“Symbolism” dalam kategori Fantasy merupakan…", "o": ["Representasi grafis mengenai konsep, sentiment, ideologi, dll", "Gambar fiksi yang mengerikan", "Gambar benda buatan manusia", "Pola geometris yang kaku"], "a": 0, "k": "Symbolism (representasi grafis mengenai konsep, sentiment, ideologi, dll"}, {"s": 21, "q": "Pada aspek Executions, evaluasi terhadap garis dilihat pada karakteristik…", "o": ["Intensitas, tipe, dan kualitasnya", "Jumlah dan panjangnya", "Warna dan ketebalannya", "Arah dan kecepatannya"], "a": 0, "k": "Evaluasi terhadap garis  dilihat pada  karakteristik intensitas,  tipe, dan kualitasnya."}, {"s": 21, "q": "“Covering” dalam aspek Executions diartikan sebagai…", "o": ["Luasnya bidang gambar yang terpakai oleh subjek", "Ketebalan garis yang dibuat subjek", "Jumlah detail dalam gambar", "Kesatuan komposisi gambar"], "a": 0, "k": "Covering : | adalah luasnya bidang  gambar yang terpakai  olęby subjek"}, {"s": 21, "q": "“Composition” dalam aspek Executions dilihat dari…", "o": ["Keseluruhannya, detail, konteks, variey, dll", "Intensitas dan tipe garis", "Luas bidang yang terpakai", "Urutan pengerjaan kotak"], "a": 0, "k": "Composisition: dilihat dari | keseluruhannya,\tdetail, konteks, variey, dll"}, {"s": 21, "q": "Aspek yang diteliti dalam Executions adalah…", "o": ["Garis, Covering, dan Composition", "Nature, Object, dan Realism", "Motor, Esthetic, dan Symbolic", "Affinitas dan Insensibilitas"], "a": 0, "k": "Executions\nGaris:\nCovering :\nComposisition:"}, {"s": 22, "q": "Affinitas adalah…", "o": ["Kemampuan menghayati", "Kemampuan mengabaikan stimulus", "Ketidakmampuan merasakan", "Kemampuan menilai secara objektif"], "a": 0, "k": "Affinitas adalah | kemampuan  menghayati"}, {"s": 22, "q": "Insensibilitas adalah…", "o": ["Ketidakmampuan menghayati atau merasakan", "Kemampuan menghayati stimulus", "Kemampuan membuat komposisi", "Kemampuan menahan emosi"], "a": 0, "k": "Insensibilitas adalah  ketidakmampuan menghayati atau merasakan"}, {"s": 23, "q": "Dasar interpretasi WZT yang pertama adalah mempertimbangkan gambar dalam hubungannya dengan stimulus, yang mencerminkan…", "o": ["Afinitas/persamaan subjek terhadap sifat-sifat khusus rangsang dan ditunjukkan sebagai S-D-R", "Kecenderungan minat subjek", "Cara pelaksanaan menggambar", "Kecepatan kerja subjek"], "a": 0, "k": "Aspek ini mencerminkan  afinitas/persamaan subjek terhadap sifat-sifat khusus rangsang dan ditunjukkan sebagai S-D-R (stimulus drawing relation)."}, {"s": 23, "q": "Meneliti isi (content) dalam dasar interpretasi WZT bertujuan mengetahui apakah gambar rumah, orang, pemandangan, benda merefleksikan…", "o": ["Kecenderungan, interest dan orientasi subjek", "Intensitas dan kualitas garis subjek", "Tingkat kecerdasan subjek", "Kecepatan motorik subjek"], "a": 0, "k": "Apa yang digambar subjek, apakah rumah, orang,  pemandangan, benda dan sebagainya merefleksikan kecenderungan, interest dan orientasi subjek"}, {"s": 23, "q": "Meneliti cara pelaksanaan (execution) dalam dasar interpretasi WZT berkaitan dengan pertanyaan…", "o": ["Bagaimana sesuatu itu digambar", "Apa yang digambar", "Mengapa subjek menggambar", "Kapan gambar dibuat"], "a": 0, "k": "Meneliti cara pelaksanaan (execution) Bagaimana sesuatu  itu digambar"}, {"s": 24, "q": "Kualitas stimulus dalam WZT dibedakan menjadi…", "o": ["Organik dan Anorganik", "Motor dan Esthetic", "Nature dan Object", "Simetris dan Asimetris"], "a": 0, "k": "Kualitas Stimulus\nOrganik\nAnorganik"}, {"s": 24, "q": "Sensibilitas subjek terhadap stimulus dibedakan menjadi…", "o": ["Affinity dan Insensibility", "Organik dan Anorganik", "Realism dan Fantasy", "Covering dan Composition"], "a": 0, "k": "Sensibilitas Subjek\nterhadap Stimulus\nAffinity\nInsensibility"}];
+
+const DURATION_MIN = 60;
+const LETTERS = ['A','B','C','D','E'];
+
+let answers = [];
+let flags = [];
+let cur = 0;
+let timeLeft = 0;
+let timerId = null;
+let timed = true;
+let startedAt = 0;
+let usedSeconds = 0;
+let submitted = false;
+let reviewFilter = 'all';
+
+const $ = id => document.getElementById(id);
+
+/* ---------- START ---------- */
+function initStart(){
+  const rules = [
+    ['Jumlah soal', DATA.length + ' soal pilihan ganda, mencakup slide 1 sampai 24.'],
+    ['Waktu', DURATION_MIN + ' menit. Timer berjalan otomatis dan jawaban dikumpulkan sendiri saat waktu habis.'],
+    ['Penilaian', 'Skor = (jumlah benar ÷ jumlah soal) × 100. Tidak ada pengurangan untuk jawaban salah.'],
+    ['Review', 'Setelah selesai, tiap soal ditampilkan bersama kutipan slide asalnya.']
+  ];
+  $('startRules').innerHTML = rules.map(r =>
+    '<li><span class="dot">' + '&#10003;' + '</span><span><b>' + r[0] + ':</b> ' + r[1] + '</span></li>'
+  ).join('');
+  $('startRules').parentElement.querySelector('h2').textContent = 'Aturan pengerjaan';
+}
+
+/* ---------- EXAM ---------- */
+function startExam(withTimer){
+  timed = withTimer;
+  answers = new Array(DATA.length).fill(null);
+  flags = new Array(DATA.length).fill(false);
+  cur = 0;
+  submitted = false;
+  usedSeconds = 0;
+  startedAt = Date.now();
+  $('view-start').classList.add('hidden');
+  $('view-result').classList.add('hidden');
+  $('view-review').classList.add('hidden');
+  $('view-exam').classList.remove('hidden');
+  $('totNo').textContent = DATA.length;
+  buildGrid();
+  render();
+  if (timed){
+    timeLeft = DURATION_MIN * 60;
+    $('timer').classList.remove('hidden');
+    updateTimer();
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      timeLeft--;
+      updateTimer();
+      if (timeLeft <= 0){
+        clearInterval(timerId);
+        submit(true);
+      }
+    }, 1000);
+  } else {
+    $('timer').textContent = '∞';
+    $('timer').className = '';
+    clearInterval(timerId);
+    timerId = setInterval(() => { usedSeconds = Math.floor((Date.now() - startedAt)/1000); }, 1000);
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateTimer(){
+  const m = Math.floor(timeLeft/60), s = timeLeft%60;
+  const el = $('timer');
+  el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  el.className = timeLeft <= 300 ? 'danger' : (timeLeft <= 900 ? 'warn' : '');
+}
+
+function buildGrid(){
+  $('qGrid').innerHTML = DATA.map((d,i) =>
+    '<button class="gnum" id="g'+i+'" onclick="jump('+i+')">' + (i+1) + '</button>'
+  ).join('');
+}
+
+function render(){
+  const d = DATA[cur];
+  $('curNo').textContent = cur + 1;
+  $('qTag').textContent = 'Slide ' + d.s;
+  $('qText').textContent = d.q;
+  $('qOpts').innerHTML = d.o.map((op,i) =>
+    '<div class="opt' + (answers[cur] === i ? ' sel' : '') + '" onclick="pick(' + i + ')">' +
+      '<span class="ltr">' + LETTERS[i] + '</span><span>' + op + '</span></div>'
+  ).join('');
+  $('btnFlag').className = 'flagbtn' + (flags[cur] ? ' on' : '');
+  $('btnFlag').textContent = flags[cur] ? 'Ditandai ragu' : 'Tandai ragu';
+  $('btnPrev').disabled = cur === 0;
+  $('btnNext').disabled = cur === DATA.length - 1;
+  const answered = answers.filter(a => a !== null).length;
+  $('progFill').style.width = (answered / DATA.length * 100) + '%';
+  DATA.forEach((_,i) => {
+    const g = $('g'+i); if (!g) return;
+    g.className = 'gnum' + (answers[i] !== null ? ' ans' : '') + (flags[i] ? ' flg' : '') + (i === cur ? ' cur' : '');
+  });
+}
+
+function pick(i){
+  if (submitted) return;
+  answers[cur] = i;
+  render();
+}
+function go(step){
+  const n = cur + step;
+  if (n < 0 || n >= DATA.length) return;
+  cur = n; render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function jump(i){ cur = i; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function toggleFlag(){
+  flags[cur] = !flags[cur];
+  render();
+  if (flags[cur]) go(1);
+}
+
+function confirmSubmit(){
+  const empty = answers.filter(a => a === null).length;
+  const msg = empty === 0
+    ? 'Semua soal sudah dijawab. Kumpulkan sekarang?'
+    : 'Masih ada ' + empty + ' soal yang kosong. Tetap kumpulkan?';
+  if (confirm(msg)) submit(false);
+}
+
+function submit(auto){
+  if (submitted) return;
+  submitted = true;
+  clearInterval(timerId);
+  if (timed) usedSeconds = DURATION_MIN*60 - Math.max(timeLeft,0);
+  else usedSeconds = Math.floor((Date.now() - startedAt)/1000);
+  if (auto) alert('Waktu habis — jawabanmu otomatis dikumpulkan.');
+  showResult();
+}
+
+/* ---------- RESULT ---------- */
+function showResult(){
+  let ok = 0, bad = 0, kos = 0;
+  DATA.forEach((d,i) => {
+    if (answers[i] === null) kos++;
+    else if (answers[i] === d.a) ok++;
+    else bad++;
+  });
+  const score = Math.round(ok / DATA.length * 100);
+  $('view-exam').classList.add('hidden');
+  $('view-review').classList.add('hidden');
+  $('view-result').classList.remove('hidden');
+  $('scoreNum').textContent = score;
+  $('ring').style.setProperty('--p', score);
+  $('stOk').textContent = ok;
+  $('stBad').textContent = bad;
+  $('stKos').textContent = kos;
+  const mm = Math.floor(usedSeconds/60), ss = usedSeconds%60;
+  $('stTime').textContent = mm + ':' + String(ss).padStart(2,'0');
+  let grade, note;
+  if (score >= 85){ grade = 'Sangat siap ujian'; note = 'Pemahamanmu sudah kuat. Cukup ulangi bagian yang salah sebentar lagi.'; }
+  else if (score >= 70){ grade = 'Cukup siap'; note = 'Dasar sudah dapat. Rapikan soal yang salah, lalu coba ulang sampai di atas 85.'; }
+  else if (score >= 55){ grade = 'Perlu penguatan'; note = 'Masih ada bagian yang bolong. Baca ulang slide yang soalnya salah, lalu ulangi kuis.'; }
+  else { grade = 'Perlu belajar ulang'; note = 'Baca ulang PPT ini dari awal, lalu kerjakan lagi tanpa timer dulu.'; }
+  $('gradeTxt').textContent = grade;
+  $('gradeNote').textContent = note;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- REVIEW ---------- */
+function showReview(mode){
+  reviewFilter = mode;
+  $('view-result').classList.add('hidden');
+  $('view-review').classList.remove('hidden');
+  document.querySelectorAll('.fbtn[data-f]').forEach(b => b.classList.toggle('on', b.dataset.f === mode));
+  renderReview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function filterReview(mode, btn){
+  reviewFilter = mode;
+  document.querySelectorAll('.fbtn[data-f]').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderReview();
+}
+function renderReview(){
+  const rows = [];
+  DATA.forEach((d,i) => {
+    const ua = answers[i];
+    const isRight = ua === d.a;
+    if (reviewFilter === 'wrong' && (isRight)) return;
+    if (reviewFilter === 'right' && !isRight) return;
+    const pill = ua === null ? '<span class="pill mut">KOSONG</span>'
+      : (isRight ? '<span class="pill ok">BENAR</span>' : '<span class="pill bad">SALAH</span>');
+    const opts = d.o.map((op,j) => {
+      let cls = 'revopt';
+      if (j === d.a) cls += ' correct';
+      else if (j === ua) cls += ' wrong';
+      let mark = '';
+      if (j === d.a && j === ua) mark = ' ✓ jawabanmu';
+      else if (j === d.a) mark = ' ← kunci';
+      else if (j === ua) mark = ' ← jawabanmu';
+      return '<div class="' + cls + '"><span class="l">' + LETTERS[j] + '.</span><span>' + op + mark + '</span></div>';
+    }).join('');
+    rows.push(
+      '<div class="rev">' +
+        '<div class="revhead"><span class="revno">SOAL ' + (i+1) + '</span>' + pill + '</div>' +
+        '<div class="revq">' + d.q + '</div>' + opts +
+        '<div class="src"><div class="h">Sumber — Slide ' + d.s + '</div><p>“' + d.k + '”</p></div>' +
+      '</div>'
+    );
+  });
+  $('revList').innerHTML = rows.length ? rows.join('') :
+    '<div class="card" style="text-align:center"><p class="lead">Tidak ada soal pada filter ini.</p></div>';
+}
+function resetAll(){
+  clearInterval(timerId);
+  $('view-result').classList.add('hidden');
+  $('view-review').classList.add('hidden');
+  $('view-exam').classList.add('hidden');
+  $('view-start').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.addEventListener('keydown', e => {
+  if ($('view-exam').classList.contains('hidden')) return;
+  const k = e.key.toUpperCase();
+  if (['A','B','C','D','E'].includes(k)){
+    const idx = LETTERS.indexOf(k);
+    if (idx < DATA[cur].o.length) pick(idx);
+  }
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+
+initStart();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
